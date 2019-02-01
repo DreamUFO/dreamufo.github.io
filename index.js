@@ -3,17 +3,17 @@ function initMap(center) {
 		source: new ol.source.OSM()
 	});
 
-	center=ol.proj.fromLonLat(center);
+	center = ol.proj.fromLonLat(center);
 
 	var mousePositionControl = new ol.control.MousePosition({
-        coordinateFormat: ol.coordinate.createStringXY(4),
-        projection: 'EPSG:4326',
-        // comment the following two lines to have the mouse position
-        // be placed within the map.
-        className: 'custom-mouse-position',
-        target: document.getElementById('mouse-position'),
-        undefinedHTML: '&nbsp;'
-      });
+		coordinateFormat: ol.coordinate.createStringXY(4),
+		projection: 'EPSG:4326',
+		// comment the following two lines to have the mouse position
+		// be placed within the map.
+		className: 'custom-mouse-position',
+		target: document.getElementById('mouse-position'),
+		undefinedHTML: '&nbsp;'
+	});
 
 	var map = new ol.Map({
 		layers: [osm],
@@ -29,25 +29,35 @@ function initMap(center) {
 	GlobalObject["map"] = map;
 }
 
-function initPage() {
-	httpGet("http://www.geoplugin.net/json.gp", function(responese) {
+function initByIp() {
+	httpGet("https://api.ipgeolocation.io/getip", function(responese) {
 		var center = [0, 0];
 		try {
 			var ipData = JSON.parse(responese);
-			center = [parseFloat(ipData["geoplugin_longitude"]) ,parseFloat(ipData["geoplugin_latitude"])];
-			var geoInfo=ipData["geoplugin_city"]+","
-			+ipData["geoplugin_regionName"]+","
-			+ipData["geoplugin_countryName"]+","
-			+ipData["geoplugin_continentName"]+"<br/>"
-			+"IP:"+ipData["geoplugin_request"];
+			httpGet("https://geoip.cdnservice.eu/api/" + ipData.ip, function(rspGeo) {
+				try {
+					var geoData = JSON.parse(rspGeo);
+					center = [parseFloat(geoData["location"]["longitude"]), parseFloat(geoData["location"]["latitude"])];
+					var geoInfo = geoData["city"] + "," +
+						geoData["country"]["name"] + "<br/>" +
+						"IP:" + ipData.ip;
 
-			document.getElementById('geoInfo').innerHTML=geoInfo;
+					document.getElementById('geoInfo').innerHTML = geoInfo;
+				} catch (err) {
+					console.error(err);
+				}
+				initMap(center);
+			});
 		} catch (err) {
+			initMap(center);
 			console.error(err);
 		}
-		initMap(center);
-	});
 
+	});
+}
+
+function initPage() {
+	initByIp();
 }
 
 function httpGet(url, callback) {
